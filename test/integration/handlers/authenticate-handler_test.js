@@ -132,6 +132,23 @@ describe('AuthenticateHandler integration', function() {
         });
     });
 
+    it('should set the `WWW-Authenticate` header with token type JWT if an unauthorized request error is thrown', function() {
+      var model = {
+        getAccessToken: function() {
+          throw new UnauthorizedRequestError();
+        }
+      };
+      var handler = new AuthenticateHandler({ tokenType: 'JWT', model: model });
+      var request = new Request({ body: {}, headers: { 'Authorization': 'JWT foo' }, method: {}, query: {} });
+      var response = new Response({ body: {}, headers: {} });
+
+      return handler.handle(request, response)
+        .then(should.fail)
+        .catch(function() {
+          response.get('WWW-Authenticate').should.equal('JWT realm="Service"');
+        });
+    });
+
     it('should throw the error if an oauth error is thrown', function() {
       var model = {
         getAccessToken: function() {
@@ -185,6 +202,35 @@ describe('AuthenticateHandler integration', function() {
       var request = new Request({
         body: {},
         headers: { 'Authorization': 'Bearer foo' },
+        method: {},
+        query: {}
+      });
+      var response = new Response({ body: {}, headers: {} });
+
+      return handler.handle(request, response)
+        .then(function(data) {
+          data.should.equal(accessToken);
+        })
+        .catch(should.fail);
+    });
+
+    it('should return an access token for JWT token type', function() {
+      var accessToken = {
+        user: {},
+        accessTokenExpiresAt: new Date(new Date().getTime() + 10000)
+      };
+      var model = {
+        getAccessToken: function() {
+          return accessToken;
+        },
+        verifyScope: function() {
+          return true;
+        }
+      };
+      var handler = new AuthenticateHandler({ addAcceptedScopesHeader: true, addAuthorizedScopesHeader: true, tokenType: 'JWT', model: model, scope: 'foo' });
+      var request = new Request({
+        body: {},
+        headers: { 'Authorization': 'JWT foo' },
         method: {},
         query: {}
       });
@@ -261,6 +307,22 @@ describe('AuthenticateHandler integration', function() {
         body: {},
         headers: {
           'Authorization': 'Bearer foo'
+        },
+        method: {},
+        query: {}
+      });
+
+      var bearerToken = handler.getTokenFromRequestHeader(request);
+
+      bearerToken.should.equal('foo');
+    });
+
+    it('should return the JWT token', function() {
+      var handler = new AuthenticateHandler({ tokenType: 'JWT', model: { getAccessToken: function() {} } });
+      var request = new Request({
+        body: {},
+        headers: {
+          'Authorization': 'JWT foo'
         },
         method: {},
         query: {}

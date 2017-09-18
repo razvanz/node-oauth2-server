@@ -36,6 +36,26 @@ describe('AuthenticateHandler', function() {
       });
     });
 
+    describe('with jwt token in the request authorization header', function() {
+      it('should call `getTokenFromRequestHeader()`', function() {
+        var handler = new AuthenticateHandler({ model: { getAccessToken: function() {} } });
+        var request = new Request({
+          body: {},
+          headers: { 'Authorization': 'JWT foo' },
+          method: {},
+          query: {}
+        });
+
+        sinon.stub(handler, 'getTokenFromRequestHeader');
+
+        handler.getTokenFromRequest(request);
+
+        handler.getTokenFromRequestHeader.callCount.should.equal(1);
+        handler.getTokenFromRequestHeader.firstCall.args[0].should.equal(request);
+        handler.getTokenFromRequestHeader.restore();
+      });
+    });
+
     describe('with bearer token in the request query', function() {
       it('should call `getTokenFromRequestQuery()`', function() {
         var handler = new AuthenticateHandler({ model: { getAccessToken: function() {} } });
